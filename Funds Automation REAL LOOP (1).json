@@ -1,0 +1,922 @@
+{
+  "name": "Funds Automation REAL LOOP",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1360,
+        -528
+      ],
+      "id": "6cdde5a5-a6f1-45f6-9374-85925e3aa0fc",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DBvULQzxLReqCaIg",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.microsoftOneDrive",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        -528
+      ],
+      "id": "568b8f98-7423-4cb4-8d20-1e19ea78daa6",
+      "name": "Download a file",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "3w96eF4e4UhFQ9qp",
+          "name": "Microsoft Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://graph.microsoft.com/v1.0/shares/u!aHR0cHM6Ly8xZHJ2Lm1zL3gvYy85NDA0ODRlOWQ5MThhZTg5L0VZa3dVYjN5WU8xSHBDMzhrVGVjZkIwQmV4cjlicXVMdTUwNHJKa3dNR1pXM0E_ZT1SdG13UHM/driveItem",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOneDriveOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1136,
+        -528
+      ],
+      "id": "30e00e00-d007-45b2-ad61-d9022aa488db",
+      "name": "HTTP Request",
+      "executeOnce": true,
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "3w96eF4e4UhFQ9qp",
+          "name": "Microsoft Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        -528
+      ],
+      "id": "3d3aebe7-d055-407a-b4ec-942c904b9ef2",
+      "name": "Extract from File",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {
+          "fileName": "Funds.xlsx",
+          "headerRow": true,
+          "sheetName": "Data"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2352,
+        -528
+      ],
+      "id": "28d886dc-8cd4-4a20-aef6-fa05d945a9fc",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "fileName": "Funds.xlsx",
+        "parentId": "940484E9D918AE89!sc744f6323f3244199bea1a22901a5f23",
+        "binaryData": true
+      },
+      "type": "n8n-nodes-base.microsoftOneDrive",
+      "typeVersion": 1,
+      "position": [
+        2576,
+        -528
+      ],
+      "id": "bbba40b5-ba8c-4cfc-86a0-0c0c3897953e",
+      "name": "Upload a file",
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "3w96eF4e4UhFQ9qp",
+          "name": "Microsoft Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7779e14a-5089-448c-8079-ca0931723423",
+              "leftValue": "={{ $('Gmail Trigger').item.binary.attachment_0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -464,
+        -528
+      ],
+      "id": "8a5e1b04-96b3-443a-b1ce-07534e4c078e",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\nconst binaryData = $('Gmail Trigger').item.binary;\nfor (const key in binaryData) {\n  if (key.startsWith('attachment_')) {\n    // We create a new object where the binary data\n    // is now inside a property called 'data'\n    const newItem = {\n      json: {\n        fileName: binaryData[key].fileName,\n        mimeType: binaryData[key].mimeType\n      },\n      binary: {\n        data: binaryData[key] // The binary data is now consistently named 'data'\n      }\n    };\n    items.push(newItem);\n  }\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -336
+      ],
+      "id": "29284660-5a92-4345-ad63-ae3612e70d6b",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -16,
+        -336
+      ],
+      "id": "01a064ab-234a-4b23-a161-85587a46b6c9",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f0c41c68-6b51-4bb3-af41-c5990565a19b",
+              "leftValue": "={{ $json.fileName }}",
+              "rightValue": ".pdf",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        -336
+      ],
+      "id": "9a135303-59d7-4d12-82ea-8eb41c52c509",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "binary",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "url",
+              "cssSelector": "a",
+              "returnValue": "attribute",
+              "attribute": "href"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        432,
+        -144
+      ],
+      "id": "9030af25-1134-47ed-817e-e97a5a5a4c6f",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        -144
+      ],
+      "id": "f2e06422-bc7d-45e7-9878-1c8c5b0cd16b",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        880,
+        -336
+      ],
+      "id": "2df4ffce-273a-4e96-8501-66455a826b9e",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following text, which was extracted from the first page of a PDF financial report, and extract the data from it according to the rules below.\n\nText to analyze:\n---\n{{ $json.text }}\n---\n\nRULES:\nYou are an expert financial data extraction assistant. From the text provided above, you must extract the following information and provide it in a strict JSON format.\n\nRules:\n1.  **This is the most important rule: You MUST NOT invent, guess, or infer any data. If a value is not explicitly and clearly written in the document, you MUST return null for that field.**\n2.  **fundName**: Extract the COMPLETE fund name including any class designation (Class A, Class B, Class F, Class I, etc.) if present. For example, if the document shows \"ASK Indian Entrepreneur Fund Class F\", return exactly \"ASK Indian Entrepreneur Fund Class F\", not just \"ASK Indian Entrepreneur Fund\".\n3.  **reportDate**: Extract the primary reporting date of the document.\n4.  **monthlyReturn**: Search for the most recent single month's net return. Look for phrases like \"net return for [Month YYYY] was X%\" or \"performance in [Month] was X%\" or values in tables labeled \"MTD\" or \"1M Return\". Extract only the numerical value. Extract ONLY the **monthly** net return for the month referenced in the email.\nDo NOT return YTD / 3M / 12M / Since inception etc. ) \nPrefer the number attached to phrases like:\n   \"net return ... for <Month YYYY> was X%\", \"1 Month (MTD)\", \"MTD\", \"1M\". If both monthly and YTD are present (e.g., \"was -1.9% and +5.0% for the year-to-date\"),\n   **choose the monthly value** (-1.9%) and ignore the YTD (+5.0%). Keep the sign (±). Strip the percent sign.\n\n**Final and most important instruction: Your entire response MUST BE ONLY the JSON",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        -336
+      ],
+      "id": "12ed66b9-7d26-4e12-9e62-e1eadc7c5851",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        -96
+      ],
+      "id": "52a12d21-1241-4515-80f1-4d6b13ac503c",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "BuJQiUkPnqOO10s7",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем все элементы с данными фондов\nconst allItems = $input.all();\n\n// Если нет элементов для обработки, возвращаем пустой массив\nif (!allItems || allItems.length === 0) {\n  return [];\n}\n\n// Берем данные Excel из первого элемента (они одинаковые для всех)\nconst firstItem = allItems[0].json;\nconst excelDataInput = firstItem.excelData;\n\n// Преобразуем данные Excel в рабочий массив\nlet excelData;\nif (typeof excelDataInput === 'string') {\n  excelData = JSON.parse(excelDataInput);\n} else if (Array.isArray(excelDataInput)) {\n  // Если это уже массив, делаем глубокую копию\n  excelData = JSON.parse(JSON.stringify(excelDataInput));\n} else {\n  // Если это объект с массивом\n  excelData = JSON.parse(JSON.stringify(excelDataInput));\n}\n\n// Вспомогательная функция для нормализации дат\nfunction getReportMonth(dateString) {\n  if (!dateString) return null;\n  \n  const monthMap = {\n    'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',\n    'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12',\n    'january': '01', 'february': '02', 'march': '03', 'april': '04', 'may': '05', 'june': '06',\n    'july': '07', 'august': '08', 'september': '09', 'october': '10', 'november': '11', 'december': '12'\n  };\n  \n  const parts = String(dateString).replace(',', '').toLowerCase().split(' ');\n  let month = null, year = null;\n  \n  for (const part of parts) {\n    if (monthMap[part]) {\n      month = monthMap[part];\n    }\n    if (!isNaN(part) && part.length === 4) {\n      year = part;\n    }\n  }\n  \n  return year && month ? `${year}-${month}` : null;\n}\n\n// Функция для добавления суффикса к имени фонда для группы\nfunction getFundNameWithGroup(baseFundName, fileName) {\n  if (!fileName) return baseFundName;\n  \n  // Извлекаем группу из имени файла (например, \"ASKIEF Class A\" из \"ASKIEF Class A - USD_31-Jul-2025.pdf\")\n  // Или ищем паттерны типа \"Class A\", \"Class B\", \"Class I\", \"Group A\", \"Group B\" и т.д.\n  const classMatch = fileName.match(/Class\\s+([A-Z])/i);\n  const groupMatch = fileName.match(/Group\\s+([A-Z])/i);\n  \n  if (classMatch) {\n    // Добавляем класс к имени фонда, если его еще нет\n    const classLetter = classMatch[1].toUpperCase();\n    if (!baseFundName.includes(`Class ${classLetter}`)) {\n      return `${baseFundName} - Class ${classLetter}`;\n    }\n  } else if (groupMatch) {\n    // Добавляем группу к имени фонда\n    const groupLetter = groupMatch[1].toUpperCase();\n    if (!baseFundName.includes(`Group ${groupLetter}`)) {\n      return `${baseFundName} - Group ${groupLetter}`;\n    }\n  }\n  \n  return baseFundName;\n}\n\n// ===== ОСНОВНАЯ ЛОГИКА =====\n// Обрабатываем КАЖДЫЙ элемент (каждое вложение)\nfor (const item of allItems) {\n  const fundData = item.json.output;\n  \n  // Проверяем наличие необходимых данных\n  if (!fundData || !fundData.fundName) {\n    continue; // Пропускаем элемент без данных\n  }\n  \n  // Получаем имя файла, если оно есть (для определения группы)\n  const fileName = item.json.fileName || '';\n  \n  // Формируем имя фонда с учетом группы/класса\n  const fundName = getFundNameWithGroup(fundData.fundName, fileName);\n  \n  // Получаем значение доходности\n  let monthlyReturn = fundData.monthlyReturn;\n  \n  // Получаем месяц отчета\n  const reportMonth = getReportMonth(fundData.reportDate);\n  \n  // Проверяем, что у нас есть все необходимые данные\n  if (!fundName || !reportMonth || monthlyReturn === null || monthlyReturn === undefined) {\n    console.log(`Пропускаем фонд: отсутствуют данные. fundName: ${fundName}, reportMonth: ${reportMonth}, monthlyReturn: ${monthlyReturn}`);\n    continue;\n  }\n  \n  // Конвертируем строковое значение в число, если необходимо\n  if (typeof monthlyReturn === 'string') {\n    monthlyReturn = parseFloat(monthlyReturn.replace(',', '.'));\n  }\n  \n  // Проверяем, существует ли колонка для этого фонда\n  let headers = excelData.length > 0 ? Object.keys(excelData[0]) : ['Date'];\n  \n  if (!headers.includes(fundName)) {\n    // Добавляем новую колонку для фонда во все существующие строки\n    for (const row of excelData) {\n      row[fundName] = null;\n    }\n    headers.push(fundName);\n  }\n  \n  // Ищем строку с нужным месяцем\n  let reportRow = excelData.find(row => row.Date === reportMonth);\n  \n  if (!reportRow) {\n    // Создаем новую строку для этого месяца\n    reportRow = { Date: reportMonth };\n    \n    // Инициализируем все существующие колонки как null\n    headers = excelData.length > 0 ? Object.keys(excelData[0]) : ['Date'];\n    if (!headers.includes(fundName)) {\n      headers.push(fundName);\n    }\n    \n    for (const header of headers) {\n      if (header !== 'Date') {\n        reportRow[header] = null;\n      }\n    }\n    \n    excelData.push(reportRow);\n  }\n  \n  // Записываем значение доходности\n  reportRow[fundName] = monthlyReturn;\n  \n  console.log(`Обработан фонд: ${fundName}, месяц: ${reportMonth}, доходность: ${monthlyReturn}`);\n}\n\n// Сортируем строки по дате для удобства\nexcelData.sort((a, b) => {\n  if (!a.Date || !b.Date) return 0;\n  return a.Date.localeCompare(b.Date);\n});\n\n// Возвращаем обновленную таблицу\nreturn excelData;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        -528
+      ],
+      "id": "919b8456-545b-4f44-8521-e1ce55fa1fcb",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2a4f1c8-6bb6-4d74-9c2f-2e89ecb7b7e9",
+              "name": "excelData",
+              "value": "={{ $('Extract from File').all().map(item => item.json) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1904,
+        -528
+      ],
+      "id": "0ff9d9a5-6930-416a-9a34-ba766b906bec",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {
+          "maxPages": 1
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        -336
+      ],
+      "id": "3b62644e-53e0-4a75-a170-f682224fe393",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"fundName\": \"Episteme Systematic Quest TR (ESQTR)\",\n  \"reportDate\": \"August 2025\",\n  \"monthlyReturn\": -1.9\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1472,
+        -112
+      ],
+      "id": "69c5e650-e649-4044-b0b0-1201638c268e",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following email body text and extract the fund's performance data according to the rules.\n\nEmail Text:\n---\n{{ $('Gmail Trigger').item.json.text }}\n---\n\nRULES:\nYou are an expert financial data extraction assistant. From the text provided above, you must extract the following information and provide it in a strict JSON format.\n\n1.  **This is the most important rule: You MUST NOT invent, guess, or infer any data. If a value is not explicitly and clearly written, you MUST return null for that field.**\n2.  **fundName**: Extract the full, specific fund name.\n3.  **reportDate**: Extract the primary reporting date.\n4.  **monthlyReturn**: Extract the most recent single month's net return from the text or a table. Look for labels like \"1 Month (MTD)\", \"monthly return\", or \"performance for [Month]\". Extract only the numerical value. Extract ONLY the **monthly** net return for the month referenced in the email.\nDo NOT return YTD / 3M / 12M / Since inception etc. ) \nPrefer the number attached to phrases like:\n   \"net return ... for <Month YYYY> was X%\", \"1 Month (MTD)\", \"MTD\", \"1M\". If both monthly and YTD are present (e.g., \"was -1.9% and +5.0% for the year-to-date\"),\n   **choose the monthly value** (-1.9%) and ignore the YTD (+5.0%). Keep the sign (±). Strip the percent sign.\n\n\n**Final and most important instruction: Your entire response MUST BE ONLY the JSON object. Your response must start with `{` and end with `}`. Do not include ```json, explanations, or any other text before or after the JSON object.**\n\nReturn ONLY a JSON object with all fields as strings:\n{\n  \"fundName\": \"...\",\n  \"reportDate\": \"Month YYYY\",\n  \"monthlyReturn\": \"-4.93\"\n}\n- No percent signs, no spaces.\n- If the body has no explicit date, use Month YYYY from email header: {{ $('Gmail Trigger').item.json.date }}\n- If truly missing, return \"\" (empty string), not null.\n\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        -832
+      ],
+      "id": "0792f31d-8d60-45f2-a441-334f82984ba2",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1072,
+        -656
+      ],
+      "id": "8cce4d9a-eb0c-4913-a77f-9eea50d1382f",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "BuJQiUkPnqOO10s7",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"fundName\": \"ASK Indian Entrepreneur Fund\",\n  \"reportDate\": \"31 July 2025\",\n  \"monthlyReturn\": \"-4.78\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1520,
+        -608
+      ],
+      "id": "d0195296-c922-446b-b4da-0e834ef947c5",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1680,
+        -528
+      ],
+      "id": "d78aa984-77b6-47a5-bd91-5dbcc9886bfe",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0,
+          "maxRetries": 2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1296,
+        -592
+      ],
+      "id": "ccfef31d-2440-41fa-97fc-4a01d60ec9fb",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "BuJQiUkPnqOO10s7",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "199a706cce5b244d",
+          "threadId": "199a1f364090082e",
+          "labelIds": [
+            "UNREAD",
+            "IMPORTANT",
+            "CATEGORY_PERSONAL",
+            "INBOX"
+          ],
+          "sizeEstimate": 10353,
+          "headers": {
+            "delivered-to": "Delivered-To: workshop@inquatro.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id af79cd13be357-8777069ef0csor274279685a.2.2025.10.02.15.24.24\r\n        for <workshop@inquatro.com>\r\n        (Google Transport Security);\r\n        Thu, 02 Oct 2025 15:24:25 -0700 (PDT)",
+            "x-received": "X-Received: by 2002:a05:620a:4154:b0:85c:bb2:ad9c with SMTP id\r\n af79cd13be357-87a3a34d280mr146678585a.53.1759443864376; Thu, 02 Oct 2025\r\n 15:24:24 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1759443865; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=NVR51tIAlWev5E+6invds5tIuq0p8RiqazinyvVcQLOpgHKF4mM0ZyxRBnO6LXe1Gt\r\n         M4uMITNw7XXPObWAbsP4Df2DGAvz0l0NOWpdwbsgYcc4FgcxmJVnchtKrOUOWOtKGKDU\r\n         qKx0ICQMYTyofxeozC7UH+mqcbkA2AkWvrUQ8dZ1ju9phRQUfgtlJlBStB3p5WNVN5eD\r\n         bQg5Z0aouhK/9nZ6+JWIduiAp+995tr+lxykn6C/2P/BHCO36986OXbYEXrnHv0GEP9c\r\n         cCbLaau6I87MlNe0YUuobKogUX40kW8pkZdhY7fDO9T9l58IyDIKga0L1JXnJFo3OsQX\r\n         8L0w==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :dkim-signature;\r\n        bh=WXwgh335X9VExMUO4jkfI6dIxZtusxgPVTrItfw0Yvc=;\r\n        fh=NSowZ6wROq8tbbBO0MNzoKoUQGM5Wx0u7+7I9KL+xXU=;\r\n        b=kO/sikSMA9raM/sIoCPQcbc2om40SunJZ5iDGHFwUh2J7P6DpKJ1proDX3iFbRB/5Y\r\n         bx65rUm18MwCsozIyEXrfWFczAWN19DZoDXNyQbMb1KUqih7gCQBuEFDMAmgizuiWOuw\r\n         JNNItD7aFS4NRwiA94pVoRffj9UQvwzaZu4pLFMQqzMIiyR3MenHg7xYkB5VvaKKWkTU\r\n         LUd1YESlj85W+yMhUeJRMmPoMfMabYwfXxZQNyjtJ8wK9vWuSBm1UxsazZ1ocG2Kh1aK\r\n         1jL2BcqvPcz4nQ6CE8qIlE/Rl8ze4pZ5FnIF9WTOqo2Y/4PGNd3p+Q1LWCryLReEZcR1\r\n         Z5rg==;\r\n        dara=google.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com;\r\n       dkim=pass header.i=@gmail.com header.s=20230601 header.b=R8J4usEi;\r\n       spf=pass (google.com: domain of simonzolanski@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=simonzolanski@gmail.com;\r\n       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;\r\n       dara=neutral header.i=@inquatro.com",
+            "return-path": "Return-Path: <simonzolanski@gmail.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of simonzolanski@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@gmail.com header.s=20230601 header.b=R8J4usEi;\r\n       spf=pass (google.com: domain of simonzolanski@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=simonzolanski@gmail.com;\r\n       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;\r\n       dara=neutral header.i=@inquatro.com",
+            "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=gmail.com; s=20230601; t=1759443864; x=1760048664; darn=inquatro.com;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :from:to:cc:subject:date:message-id:reply-to;\r\n        bh=WXwgh335X9VExMUO4jkfI6dIxZtusxgPVTrItfw0Yvc=;\r\n        b=R8J4usEiwueUGog/UNjpe+DRUjGFDIVhkrdd05uI6sFMcMmXNcfcDT8SEFtNfby202\r\n         UEvp81QbjbxQ+5kpnMr3ItXJJff7i5mm9CMBj7V3n0G21Pvrg/PNy68KiKbkgqlX4XJ+\r\n         zqYRWi7s0ISD0KDzTg8LjtTzslUlio15QQ81HsdCfOT640jogdxqbA95lnilRrEvv4dN\r\n         84yNzyB1ZnT7q8ISwVkcfpC3KGtn8dblu31hf1hcAi0/TaUvZg4GD7zA89gzOjUBeVFF\r\n         DYCz+x0xrNv6CRBBRoBC3ea7tZ6xSD6+w8RVI8ZZy4V03JQEErYBCzO2QkS+byGPUE7E\r\n         CfKw==",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20230601; t=1759443864; x=1760048664;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;\r\n        bh=WXwgh335X9VExMUO4jkfI6dIxZtusxgPVTrItfw0Yvc=;\r\n        b=fX4LfK9bop4ClaatK5WIOGdYzRTk+xxjWT90VkMA6GKkQJ7Z4NBREQXLd9fHc/H3D9\r\n         IFL9tSLab8pV7Ku+Xt1TIQCO8hK2Lb9JD562zuXzB9HlO/Bz8JL/ibBXvL3NQU/REK9T\r\n         L++OnmHszVpinbpJoCVxNji+uFgUm7wn3rJ7f8fZQc8SoyyiJUgVNNGLsBioo3u03I9Q\r\n         PYLUq//8/2Bx0kUPEOrCTQKiKW9x80IKXvW2XpAQb+i+UxRlivWsVmk6ERQYRBa+LcvI\r\n         pDBDVwExD3CLORXrezOA8TxGYhzZgB5qUaaNmv3F82MAb8QJIvMAq6dPHBnCmfYdN9QX\r\n         d0mg==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0Yyf3fARrZIxxrcOmjY4crAMK5EecWiio+dQy2AstvNOwrIV9AYp\r\n\terD+wS18XsOmtz4EfN44vIlNsvsQZsSVk2JL+kZbAHtJxS71e1U4r28uKYhRYlnGc8SBEahCxds\r\n\tlrbVXZaLEKiTgGiFWvlq9euBsK2j0iryBWuHQb6E=",
+            "x-gm-gg": "X-Gm-Gg: ASbGncsDrYMmGHUgQIFN4l7Fx/UZO+O/QBQwTnGOBb80mzmayw5pahVf3gDKvTaREpW\r\n\tSKOVzimb4hUapifZWA/4KmMM9v85hFS9dk6OEqv091vkqhuOMBLNmPRBQmqKbMS7VV6grY+iytU\r\n\t9vqEplCGMAycK8lWOL+AIvFCxsadMEo7MRnqk7SCCf/83gVRKLGOrMowyFhUE+LtxhBI6p5MFDg\r\n\tIqBzSosTbjWj7F5LPJM63DKj9b06A94",
+            "x-google-smtp-source": "X-Google-Smtp-Source: AGHT+IFiaRhSh9oiTeHLrn+L3GVQT1lHZ1Iggyp6Krp/pAnlmQRAwyWr1xOiU9Bvx2/y0u6Dsw1iwmheTTbhjWGkXlA=",
+            "mime-version": "MIME-Version: 1.0",
+            "references": "References: <CAAZM8BD1DpYu=5NctK9__jsGjUa08Cj-zpDmsYokix429NGsyg@mail.gmail.com>\r\n <CAAZM8BDTaAtC-5N_zeJmES=yL=ONj1DaR=5B7U9m8_nu-+-18Q@mail.gmail.com>",
+            "in-reply-to": "In-Reply-To: <CAAZM8BDTaAtC-5N_zeJmES=yL=ONj1DaR=5B7U9m8_nu-+-18Q@mail.gmail.com>",
+            "from": "From: Senya Spivak <simonzolanski@gmail.com>",
+            "date": "Date: Fri, 3 Oct 2025 00:24:13 +0200",
+            "x-gm-features": "X-Gm-Features: AS18NWCLRNe7JwQ9-jLkITzAHbnF-GTopsGiinj1SPNMo3TxaccwoX1ZDuh4yGg",
+            "message-id": "Message-ID: <CAAZM8BCw+eUXZJusF2ssQ_YFx-vsvSDrspvLUkwoNP1KW7ug=A@mail.gmail.com>",
+            "subject": "Subject: Fwd: Monthly Performance Report: Parnassus Equity Income Fund -\r\n September 2025",
+            "to": "To: workshop@inquatro.com",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"00000000000089da8506403472df\""
+          },
+          "html": "<div dir=\"ltr\"><br><br><div class=\"gmail_quote gmail_quote_container\"><div dir=\"ltr\" class=\"gmail_attr\">---------- Forwarded message ---------<br>From: <strong class=\"gmail_sendername\" dir=\"auto\">Senya Spivak</strong> <span dir=\"auto\">&lt;<a href=\"mailto:simonzolanski@gmail.com\">simonzolanski@gmail.com</a>&gt;</span><br>Date: Thu, 2 Oct 2025 at 23:24<br>Subject: Fwd: Monthly Performance Report: Parnassus Equity Income Fund - September 2025<br>To:  &lt;<a href=\"mailto:workshop@inquatro.com\">workshop@inquatro.com</a>&gt;<br></div><br><br><div dir=\"ltr\"><br><br><div class=\"gmail_quote\"><div dir=\"ltr\" class=\"gmail_attr\">---------- Forwarded message ---------<br>From: <strong class=\"gmail_sendername\" dir=\"auto\">Senya Spivak</strong> <span dir=\"auto\">&lt;<a href=\"mailto:simonzolanski@gmail.com\" target=\"_blank\">simonzolanski@gmail.com</a>&gt;</span><br>Date: Thu, 2 Oct 2025 at 00:44<br>Subject: Monthly Performance Report: Parnassus Equity Income Fund - September 2025<br>To:  &lt;<a href=\"mailto:workshop@inquatro.com\" target=\"_blank\">workshop@inquatro.com</a>&gt;<br></div><br><br><div dir=\"ltr\"><p>Dear Investor,</p><p>Please find the summary of performance for the Parnassus Equity Income Fund - Investor Class for the month of September 2025.</p><p>The global markets showed mixed signals this month, but our strategic positions in the technology and healthcare sectors allowed us to navigate the volatility effectively. Further details on portfolio attribution and market commentary will be available in the full factsheet, which will be sent separately.</p><p>Below is a summary of the fund&#39;s performance data.<br><br></p><p><b>Parnassus Equity Income Fund - Investor Class Performance as of September 30, 2025</b></p><div><div><span><span><div><div><table><thead><tr><td>Period</td><td>Fund Net Return</td><td>Benchmark Return</td></tr></thead><tbody><tr><td><b>1 Month (MTD)</b></td><td><b>-4.93%</b></td><td>-3.50%</td></tr><tr><td>3 Month</td><td>-2.10%</td><td>-1.80%</td></tr><tr><td>YTD</td><td>+8.75%</td><td>+9.50%</td></tr><tr><td>1 Year</td><td>+12.30%</td><td>+11.90%</td></tr><tr><td>Since Inception</td><td>+45.60%</td><td>+42.10%</td></tr></tbody></table></div><div><br></div></div></span></span></div></div><p>We appreciate your continued trust in our strategy. Please do not hesitate to reach out if you have any questions.</p><p>Best regards,</p><p><b>The Parnassus Capital Team</b>\n<span><span><a rel=\"noopener\" href=\"https://www.google.com/search?q=http://www.parnassus-capital.com\" target=\"_blank\">www.parnassus-capital.com</a></span></span></p><h3></h3><p></p><hr></div>\n</div></div>\n</div></div>\n",
+          "text": "---------- Forwarded message ---------\nFrom: Senya Spivak <simonzolanski@gmail.com>\nDate: Thu, 2 Oct 2025 at 23:24\nSubject: Fwd: Monthly Performance Report: Parnassus Equity Income Fund -\nSeptember 2025\nTo: <workshop@inquatro.com>\n\n\n\n\n---------- Forwarded message ---------\nFrom: Senya Spivak <simonzolanski@gmail.com>\nDate: Thu, 2 Oct 2025 at 00:44\nSubject: Monthly Performance Report: Parnassus Equity Income Fund -\nSeptember 2025\nTo: <workshop@inquatro.com>\n\n\nDear Investor,\n\nPlease find the summary of performance for the Parnassus Equity Income Fund\n- Investor Class for the month of September 2025.\n\nThe global markets showed mixed signals this month, but our strategic\npositions in the technology and healthcare sectors allowed us to navigate\nthe volatility effectively. Further details on portfolio attribution and\nmarket commentary will be available in the full factsheet, which will be\nsent separately.\n\nBelow is a summary of the fund's performance data.\n\n*Parnassus Equity Income Fund - Investor Class Performance as of September\n30, 2025*\nPeriod Fund Net Return Benchmark Return\n*1 Month (MTD)* *-4.93%* -3.50%\n3 Month -2.10% -1.80%\nYTD +8.75% +9.50%\n1 Year +12.30% +11.90%\nSince Inception +45.60% +42.10%\n\nWe appreciate your continued trust in our strategy. Please do not hesitate\nto reach out if you have any questions.\n\nBest regards,\n\n*The Parnassus Capital Team* www.parnassus-capital.com\n<https://www.google.com/search?q=http://www.parnassus-capital.com>\n\n------------------------------\n",
+          "textAsHtml": "<p>---------- Forwarded message ---------<br/>From: Senya Spivak &lt;<a href=\"mailto:simonzolanski@gmail.com\">simonzolanski@gmail.com</a>&gt;<br/>Date: Thu, 2 Oct 2025 at 23:24<br/>Subject: Fwd: Monthly Performance Report: Parnassus Equity Income Fund -<br/>September 2025<br/>To: &lt;<a href=\"mailto:workshop@inquatro.com\">workshop@inquatro.com</a>&gt;</p><p>---------- Forwarded message ---------<br/>From: Senya Spivak &lt;<a href=\"mailto:simonzolanski@gmail.com\">simonzolanski@gmail.com</a>&gt;<br/>Date: Thu, 2 Oct 2025 at 00:44<br/>Subject: Monthly Performance Report: Parnassus Equity Income Fund -<br/>September 2025<br/>To: &lt;<a href=\"mailto:workshop@inquatro.com\">workshop@inquatro.com</a>&gt;</p><p>Dear Investor,</p><p>Please find the summary of performance for the Parnassus Equity Income Fund<br/>- Investor Class for the month of September 2025.</p><p>The global markets showed mixed signals this month, but our strategic<br/>positions in the technology and healthcare sectors allowed us to navigate<br/>the volatility effectively. Further details on portfolio attribution and<br/>market commentary will be available in the full factsheet, which will be<br/>sent separately.</p><p>Below is a summary of the fund&apos;s performance data.</p><p>*Parnassus Equity Income Fund - Investor Class Performance as of September<br/>30, 2025*<br/>Period Fund Net Return Benchmark Return<br/>*1 Month (MTD)* *-4.93%* -3.50%<br/>3 Month -2.10% -1.80%<br/>YTD +8.75% +9.50%<br/>1 Year +12.30% +11.90%<br/>Since Inception +45.60% +42.10%</p><p>We appreciate your continued trust in our strategy. Please do not hesitate<br/>to reach out if you have any questions.</p><p>Best regards,</p><p>*The Parnassus Capital Team* <a href=\"http://www.parnassus-capital.com\">www.parnassus-capital.com</a><br/>&lt;<a href=\"https://www.google.com/search?q=http://www.parnassus-capital.com\">https://www.google.com/search?q=http://www.parnassus-capital.com</a>&gt;</p><p>------------------------------</p>",
+          "subject": "Fwd: Monthly Performance Report: Parnassus Equity Income Fund - September 2025",
+          "references": [
+            "<CAAZM8BD1DpYu=5NctK9__jsGjUa08Cj-zpDmsYokix429NGsyg@mail.gmail.com>",
+            "<CAAZM8BDTaAtC-5N_zeJmES=yL=ONj1DaR=5B7U9m8_nu-+-18Q@mail.gmail.com>"
+          ],
+          "date": "2025-10-02T22:24:13.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "workshop@inquatro.com",
+                "name": ""
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><a href=\"mailto:workshop@inquatro.com\" class=\"mp_address_email\">workshop@inquatro.com</a></span>",
+            "text": "workshop@inquatro.com"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "simonzolanski@gmail.com",
+                "name": "Senya Spivak"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Senya Spivak</span> &lt;<a href=\"mailto:simonzolanski@gmail.com\" class=\"mp_address_email\">simonzolanski@gmail.com</a>&gt;</span>",
+            "text": "\"Senya Spivak\" <simonzolanski@gmail.com>"
+          },
+          "messageId": "<CAAZM8BCw+eUXZJusF2ssQ_YFx-vsvSDrspvLUkwoNP1KW7ug=A@mail.gmail.com>",
+          "inReplyTo": "<CAAZM8BDTaAtC-5N_zeJmES=yL=ONj1DaR=5B7U9m8_nu-+-18Q@mail.gmail.com>"
+        }
+      },
+      {
+        "json": {
+          "id": "199a706a75754448",
+          "threadId": "19999db9004ce0a3",
+          "labelIds": [
+            "UNREAD",
+            "IMPORTANT",
+            "CATEGORY_PERSONAL",
+            "INBOX"
+          ],
+          "sizeEstimate": 8004,
+          "headers": {
+            "delivered-to": "Delivered-To: workshop@inquatro.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id af79cd13be357-87770b69de9sor302503085a.4.2025.10.02.15.24.15\r\n        for <workshop@inquatro.com>\r\n        (Google Transport Security);\r\n        Thu, 02 Oct 2025 15:24:15 -0700 (PDT)",
+            "x-received": "X-Received: by 2002:a05:620a:31a3:b0:853:1ce9:842f with SMTP id\r\n af79cd13be357-87a374ed3a6mr152978085a.18.1759443854556; Thu, 02 Oct 2025\r\n 15:24:14 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1759443855; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=X0QmD/l8KcmEIWKaX9dWT3k13zMVYjZQKhguLrpICpfnNrV+9R1mDIkEq0HKvE3fOK\r\n         uNz+0i+c+15dxrU6iG7KKSXIrZtCqU5HttQ4mDtiNZ0hrWiN8ihqmcCMUPh+bZHdsfZF\r\n         v4WAZjIAH8Vi32VkTTNAAWkSLfGjkpHsAsToHRRRT/xYw6fuzY2jVgrsctNPfym+no6h\r\n         rcucn0Fbq/RtxHediIWYsnWg6sKjMTkvrRRhCLc2INQSf3ONqdYaEQuvo+Zn1ov0x7GK\r\n         Q1jUY9KZHSamP338ElSeoQED7J6ThWerey0MOhiOrKRDyUAti0WMbLQ90M+kqKrsykkC\r\n         mN8A==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :dkim-signature;\r\n        bh=R5RIpTQS5fXXN9b5Vrmr0LuEWgiSbf6+rxGRzwSDHnM=;\r\n        fh=NSowZ6wROq8tbbBO0MNzoKoUQGM5Wx0u7+7I9KL+xXU=;\r\n        b=EM9u36j++ifhzajYFT7B96emqnLnPt9E92d0uDuC0ynLpRk0ozetjJL1C4pefYYI3z\r\n         A5E1Llqe59/kpf6cS4zUKHU2CP8i7vJxMabQIjXVlbMCIKzWzgQq5COmzZa9R9Ag8KhN\r\n         Hb6SxxSF0lsFDSscmoQH36ZOexpuBFkOva8ZBSRk+hFvMPIGp7DHj2Oxs7eDnnVZ/9S5\r\n         aZnpKPGvqkcDqOKffAh+q22wtOSQDd4dpZdXfWUk3sojjsAZGo1jHyIb79bHcvyij1/h\r\n         9n2F0RwejCPYe2a/Lwtw4C92yb7GeEzMZqYOg+1GRDN2b5y68kcbGXv7F4GNJUkgFE5i\r\n         KIAA==;\r\n        dara=google.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com;\r\n       dkim=pass header.i=@gmail.com header.s=20230601 header.b=ftDA2EYg;\r\n       spf=pass (google.com: domain of simonzolanski@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=simonzolanski@gmail.com;\r\n       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;\r\n       dara=neutral header.i=@inquatro.com",
+            "return-path": "Return-Path: <simonzolanski@gmail.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of simonzolanski@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@gmail.com header.s=20230601 header.b=ftDA2EYg;\r\n       spf=pass (google.com: domain of simonzolanski@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=simonzolanski@gmail.com;\r\n       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;\r\n       dara=neutral header.i=@inquatro.com",
+            "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=gmail.com; s=20230601; t=1759443854; x=1760048654; darn=inquatro.com;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :from:to:cc:subject:date:message-id:reply-to;\r\n        bh=R5RIpTQS5fXXN9b5Vrmr0LuEWgiSbf6+rxGRzwSDHnM=;\r\n        b=ftDA2EYgPRCO67DTPQLmnIRsj1TN+t5lgHFghulZvNX4omtPiHsCx4BkrRiV9mv5PA\r\n         iJkYqNL29PABBfr+PxEag9pFvDsnhe1a9fohvaz9egMbPVScgXqc2sMRBl0GJ8zaHL0+\r\n         +VabjbPu7bHnAzuzlORxx7zjOiReueb9emOMTOvdqXm2cHigePkoKK4jy0Db6YFDMgH9\r\n         7KFyxqtirj08ZPEuuieC831eRX3vqcKD0nD7cpGeXZZxgZNjPHWIv6gbE3fIj6u8kVFv\r\n         4RIMA7vTTBRybLUAU0KipnMH/DdDoJieBCtI/KDGCNqjGTRYSbVhv2t53OUR2R+Fin/e\r\n         aURg==",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20230601; t=1759443854; x=1760048654;\r\n        h=to:subject:message-id:date:from:in-reply-to:references:mime-version\r\n         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;\r\n        bh=R5RIpTQS5fXXN9b5Vrmr0LuEWgiSbf6+rxGRzwSDHnM=;\r\n        b=E+EnifEL0E0DU49IZHchpXVbuKhJrPnwqULQLhfY29jMo4Gh3Pox4bFg0e7amDRwPS\r\n         se0HT+o9BGBdIei+EZr0az71flxjGLtZOJF7bzDEovfwW4ZbbYG85w27290VN7aIx0gU\r\n         S5WmueDDhTRfiJeIrchsXcx2pc//YusbqQegLr6g2adpgWMT13+aAN3wh5fIKlhQAsTT\r\n         zK4r/f5/uM5u3wKCN6GVJocNB7bt3nWKVe4Iw7goMutM0UmREXmUQseuK3Jy4Cv4tI8e\r\n         GvEHoaZcyAEj4LmgzWCDrfbyTVo9uGtAg3zHxOs8WXXjhc1l3oshHjZPRXPSXWZ43+E3\r\n         wl0Q==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0YymC31xqtkbwhhPrTaw05dbLqY8N/lLokxPFAgsxqvcGVFc1U//\r\n\t3uALUiG+So7sb9PjJohe5zb1DUBgQBubwZ+WtlMd+b6hEuh0kXsRnZGLMv7gKJ6bRUed62pdw6P\r\n\t9YxKS4HmovNJiTtNA3F0yznlPAQPCuaXQMAcPH/E=",
+            "x-gm-gg": "X-Gm-Gg: ASbGncugs2qbaIAO/w3YRL8IpS2xpE3XZKQBc1KTSQOOYDcZwMUKi2F2Azttc+zdGxd\r\n\tLoGMLABQ8rXKZ85wqbxJUX5gxxDuV8uYJU5giuns2P91m3jc3SeaZUwT42OYEBkrwedF5fMwcRH\r\n\tq3JIx79Cg94XDQoaCqWCPgoMijBpVkbuNR/YFj+JtG9ILhrlJnbkoVwr0VN+iC5l5gOzkopp0i9\r\n\t0LUaA7p00ViJNLqKKGXfAWmw6P/W5GTvKvFXzh3A6E=",
+            "x-google-smtp-source": "X-Google-Smtp-Source: AGHT+IH3GbceHZGnR0qv9OXxh6zslQuyYATG96Bu2xBu05jEyGljLm1UqqaC3TOf0+56jCrFH9KwKqifHMF02JgwVEA=",
+            "mime-version": "MIME-Version: 1.0",
+            "references": "References: <CAAZM8BDTJbMZeTkbUfnOOw0RjJPzsXxZV0fAL9Zvse5CUbqa2Q@mail.gmail.com>\r\n <CAAZM8BAJxDBkLcXbpFdbAo9DL9qt7wh9Z-2Bi_b3n9C5nsmvFQ@mail.gmail.com>",
+            "in-reply-to": "In-Reply-To: <CAAZM8BAJxDBkLcXbpFdbAo9DL9qt7wh9Z-2Bi_b3n9C5nsmvFQ@mail.gmail.com>",
+            "from": "From: Senya Spivak <simonzolanski@gmail.com>",
+            "date": "Date: Fri, 3 Oct 2025 00:24:03 +0200",
+            "x-gm-features": "X-Gm-Features: AS18NWC3UA1RT-0MX9nGC_pylLGWqCVP0l7yf2yEzRztGY76s4G_naU2D2PjEQ8",
+            "message-id": "Message-ID: <CAAZM8BDGgPpmrKfoaC-j7T-WZBT0QstUf97x03bG8RK1s3RSLQ@mail.gmail.com>",
+            "subject": "Subject: Fwd: New Asset: Arctic Mineral Resources",
+            "to": "To: workshop@inquatro.com",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"000000000000f4021f0640347118\""
+          },
+          "html": "<div dir=\"ltr\"><br><br><div class=\"gmail_quote gmail_quote_container\"><div dir=\"ltr\" class=\"gmail_attr\">---------- Forwarded message ---------<br>From: <strong class=\"gmail_sendername\" dir=\"auto\">Senya Spivak</strong> <span dir=\"auto\">&lt;<a href=\"mailto:simonzolanski@gmail.com\">simonzolanski@gmail.com</a>&gt;</span><br>Date: Thu, 2 Oct 2025 at 23:24<br>Subject: Fwd: New Asset: Arctic Mineral Resources<br>To:  &lt;<a href=\"mailto:workshop@inquatro.com\">workshop@inquatro.com</a>&gt;<br></div><br><br><div dir=\"ltr\"><br><br><div class=\"gmail_quote\"><div dir=\"ltr\" class=\"gmail_attr\">---------- Forwarded message ---------<br>From: <strong class=\"gmail_sendername\" dir=\"auto\">Senya Spivak</strong> <span dir=\"auto\">&lt;<a href=\"mailto:simonzolanski@gmail.com\" target=\"_blank\">simonzolanski@gmail.com</a>&gt;</span><br>Date: Tue, 30 Sept 2025 at 11:01<br>Subject: New Asset: Arctic Mineral Resources<br>To: <a href=\"mailto:workshop@inquatro.com\" target=\"_blank\">workshop@inquatro.com</a> &lt;<a href=\"mailto:workshop@inquatro.com\" target=\"_blank\">workshop@inquatro.com</a>&gt;<br></div><br><br><div dir=\"ltr\"><span><span><div><div><div><pre><code role=\"text\">FYI, we have added a new fund to the portfolio: &quot;Arctic Mineral Resources&quot;. Its first recorded monthly return is 0.95%.</code></pre></div></div></div></span></span></div>\n</div></div>\n</div></div>\n",
+          "text": "---------- Forwarded message ---------\nFrom: Senya Spivak <simonzolanski@gmail.com>\nDate: Thu, 2 Oct 2025 at 23:24\nSubject: Fwd: New Asset: Arctic Mineral Resources\nTo: <workshop@inquatro.com>\n\n\n\n\n---------- Forwarded message ---------\nFrom: Senya Spivak <simonzolanski@gmail.com>\nDate: Tue, 30 Sept 2025 at 11:01\nSubject: New Asset: Arctic Mineral Resources\nTo: workshop@inquatro.com <workshop@inquatro.com>\n\n\nFYI, we have added a new fund to the portfolio: \"Arctic Mineral\nResources\". Its first recorded monthly return is 0.95%.\n",
+          "textAsHtml": "<p>---------- Forwarded message ---------<br/>From: Senya Spivak &lt;<a href=\"mailto:simonzolanski@gmail.com\">simonzolanski@gmail.com</a>&gt;<br/>Date: Thu, 2 Oct 2025 at 23:24<br/>Subject: Fwd: New Asset: Arctic Mineral Resources<br/>To: &lt;<a href=\"mailto:workshop@inquatro.com\">workshop@inquatro.com</a>&gt;</p><p>---------- Forwarded message ---------<br/>From: Senya Spivak &lt;<a href=\"mailto:simonzolanski@gmail.com\">simonzolanski@gmail.com</a>&gt;<br/>Date: Tue, 30 Sept 2025 at 11:01<br/>Subject: New Asset: Arctic Mineral Resources<br/>To: <a href=\"mailto:workshop@inquatro.com\">workshop@inquatro.com</a> &lt;<a href=\"mailto:workshop@inquatro.com\">workshop@inquatro.com</a>&gt;</p><p>FYI, we have added a new fund to the portfolio: &quot;Arctic Mineral<br/>Resources&quot;. Its first recorded monthly return is 0.95%.</p>",
+          "subject": "Fwd: New Asset: Arctic Mineral Resources",
+          "references": [
+            "<CAAZM8BDTJbMZeTkbUfnOOw0RjJPzsXxZV0fAL9Zvse5CUbqa2Q@mail.gmail.com>",
+            "<CAAZM8BAJxDBkLcXbpFdbAo9DL9qt7wh9Z-2Bi_b3n9C5nsmvFQ@mail.gmail.com>"
+          ],
+          "date": "2025-10-02T22:24:03.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "workshop@inquatro.com",
+                "name": ""
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><a href=\"mailto:workshop@inquatro.com\" class=\"mp_address_email\">workshop@inquatro.com</a></span>",
+            "text": "workshop@inquatro.com"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "simonzolanski@gmail.com",
+                "name": "Senya Spivak"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Senya Spivak</span> &lt;<a href=\"mailto:simonzolanski@gmail.com\" class=\"mp_address_email\">simonzolanski@gmail.com</a>&gt;</span>",
+            "text": "\"Senya Spivak\" <simonzolanski@gmail.com>"
+          },
+          "messageId": "<CAAZM8BDGgPpmrKfoaC-j7T-WZBT0QstUf97x03bG8RK1s3RSLQ@mail.gmail.com>",
+          "inReplyTo": "<CAAZM8BAJxDBkLcXbpFdbAo9DL9qt7wh9Z-2Bi_b3n9C5nsmvFQ@mail.gmail.com>"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download a file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Download a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Upload a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload a file": {
+      "main": [
+        []
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a14f78d2-d24e-40af-adee-d0b6bbf45dc4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4f94943ac30b5c294e6d323edc239aa0586fefd4bfc59141d144819c789a283a"
+  },
+  "id": "kVWx2yAz72AmM4zj",
+  "tags": []
+}
